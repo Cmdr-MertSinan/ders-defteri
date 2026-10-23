@@ -1,0 +1,9 @@
+{
+  "name": "Ders Defteri",
+  "short_name": "Defter",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1e1d1a",
+  "theme_color": "#1e1d1a",
+  "lang": "tr"
+}

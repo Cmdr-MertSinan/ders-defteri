@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "source": "https://moodle.eul.edu.tr",
+  "courses": [
+    {
+      "name": "Anatomi",
+      "code": "SBIL105",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Anatomi 1. hafta.pdf" },
+        { "week": 2, "title": "2. hafta", "file": "Anatomi 2. hafta.pdf" },
+        { "week": 3, "title": "3. hafta", "file": "Anatomi 3. hafta.pdf" }
+      ]
+    },
+    {
+      "name": "Fizyoloji",
+      "code": "SBIL103",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Fizyoloji 1. hafta.pdf" },
+        { "week": 2, "title": "2. hafta", "file": "Fizyoloji 2. hafta.pdf" },
+        { "week": 3, "title": "3. hafta", "file": "Fizyoloji 3. hafta.pdf" }
+      ]
+    },
+    {
+      "name": "Mikrobiyoloji",
+      "code": "SBIL109",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Mikrobiyoloji 1. hafta.pdf" },
+        { "week": 2, "title": "2. hafta", "file": "Mikrobiyoloji 2. hafta.pdf" },
+        { "week": 3, "title": "3. hafta", "file": "Mikrobiyoloji 3. hafta.pdf" },
+        { "week": 4, "title": "4. hafta", "file": "Mikrobiyoloji 4. hafta.pdf" }
+      ]
+    },
+    {
+      "name": "Matematik",
+      "code": "ORTK109",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Matematik 1. hafta.pdf" },
+        { "week": 2, "title": "2-3. hafta", "file": "Matematik 2-3. hafta.pdf" },
+        { "week": 4, "title": "4. hafta", "file": "Matematik 4. hafta.pdf" }
+      ]
+    },
+    {
+      "name": "Halk Sağlığı",
+      "code": "ORTK201",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Halk Sagligi 1. hafta.pdf" },
+        { "week": 2, "title": "2. hafta", "file": "Halk Sagligi 2. hafta.pdf" },
+        { "week": 3, "title": "3. hafta", "file": "Halk Sagligi 3. hafta.pdf" },
+        { "week": 4, "title": "4. hafta", "file": "Halk Sagligi 4. hafta.pdf" },
+        { "week": 4, "title": "4. hafta ek 1", "file": "Halk Sagligi 4. hafta ek 1.pdf" },
+        { "week": 4, "title": "4. hafta ek 2", "file": "Halk Sagligi 4. hafta ek 2.pdf" },
+        { "week": 5, "title": "5. hafta", "file": "Halk Sagligi 5. hafta.pdf" }
+      ]
+    },
+    {
+      "name": "Sosyoloji",
+      "code": "ORTK115",
+      "files": [
+        { "week": 1, "title": "1. hafta", "file": "Sosyoloji 1. hafta.pptx" },
+        { "week": 2, "title": "2. hafta", "file": "Sosyoloji 2. hafta.pptx" }
+      ]
+    }
+  ]
+}
