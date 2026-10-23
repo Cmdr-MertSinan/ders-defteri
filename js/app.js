@@ -4,10 +4,13 @@ const App = (() => {
   let state = { status: "", error: "" };
 
   function parseHash() {
-    const hash = location.hash.replace(/^#/, "") || "/";
-    const week = hash.match(/^\/course\/([^/]+)\/week\/([^/]+)/);
-    if (week) return { name: "week", courseId: week[1], weekId: week[2], tab: new URLSearchParams(hash.split("?")[1] || "").get("tab") || "slides" };
-    const course = hash.match(/^\/course\/([^/]+)/);
+    const raw = (location.hash.replace(/^#/, "") || "/").split("?")[0];
+    const week = raw.match(/^\/course\/([^/]+)\/week\/([^/?#]+)(?:\/(ozet|summary|slides))?$/);
+    if (week) {
+      const tab = week[3] === "ozet" || week[3] === "summary" ? "summary" : "slides";
+      return { name: "week", courseId: week[1], weekId: week[2], tab };
+    }
+    const course = raw.match(/^\/course\/([^/]+)/);
     if (course) return { name: "course", courseId: course[1] };
     return { name: "home" };
   }
@@ -200,6 +203,31 @@ const App = (() => {
     root.append(grid);
   }
 
+  async function courseNotesCard(course) {
+    const note = (await DB.get("notes", course.id)) || { courseId: course.id, text: "" };
+    const card = el(`
+      <div class="card form-card notes-card">
+        <strong>Not defteri</strong>
+        <p class="meta">${escapeHtml(course.name)} için kendi notların. Otomatik kaydedilir.</p>
+        <textarea id="course-notes" rows="8" placeholder="Ders notu, hatırlatma, özet kenarına yazdıkların…"></textarea>
+      </div>
+    `);
+    const area = card.querySelector("#course-notes");
+    area.value = note.text || "";
+    let timer = null;
+    area.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        DB.put("notes", {
+          courseId: course.id,
+          text: area.value,
+          updatedAt: Date.now(),
+        });
+      }, 250);
+    });
+    return card;
+  }
+
   async function renderCourse() {
     const course = await DB.get("courses", route.courseId);
     if (!course) return go("/");
@@ -218,6 +246,7 @@ const App = (() => {
         </header>
       `)
     );
+    root.append(await courseNotesCard(course));
     const form = el(`
       <form class="card form-card">
         <strong>Hafta ekle</strong>
@@ -296,7 +325,8 @@ const App = (() => {
     `);
     tabs.querySelectorAll(".tab").forEach((button) => {
       button.addEventListener("click", () => {
-        go(`/course/${course.id}/week/${week.id}?tab=${button.dataset.tab}`);
+        const suffix = button.dataset.tab === "summary" ? "/ozet" : "";
+        go(`/course/${course.id}/week/${week.id}${suffix}`);
       });
     });
     root.append(tabs);
@@ -509,6 +539,7 @@ const App = (() => {
     });
     bar.querySelector("#pdf").addEventListener("click", () => exportPdf(course, week, summary));
     root.append(bar);
+    root.append(await courseNotesCard(course));
 
     if (busy) {
       root.append(el(`<div class="empty">Yüklediğin slaytlar sayfa sayfa özetleniyor…</div>`));

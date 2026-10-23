@@ -180,6 +180,12 @@ label {
   color: var(--muted);
 }
 
+.notes-card textarea {
+  min-height: 160px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 input[type="text"],
 input[type="number"],
 textarea {

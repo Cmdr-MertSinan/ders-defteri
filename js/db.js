@@ -1,6 +1,6 @@
 const DB = (() => {
   const NAME = "ders-defteri";
-  const VERSION = 1;
+  const VERSION = 2;
   let dbPromise;
 
   function open() {
@@ -22,6 +22,9 @@ const DB = (() => {
         }
         if (!db.objectStoreNames.contains("summaries")) {
           db.createObjectStore("summaries", { keyPath: "weekId" });
+        }
+        if (!db.objectStoreNames.contains("notes")) {
+          db.createObjectStore("notes", { keyPath: "courseId" });
         }
       };
       req.onsuccess = () => resolve(req.result);
