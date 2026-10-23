@@ -157,32 +157,6 @@ const App = (() => {
         </header>
       `)
     );
-    const form = el(`
-      <form class="card form-card">
-        <strong>Yeni ders ekle</strong>
-        <div class="row">
-          <label style="flex:1">Ders adı
-            <input name="name" required placeholder="Örn. Veri Yapıları" />
-          </label>
-          <label>Kod
-            <input name="code" placeholder="CENG 211" />
-          </label>
-          <button class="btn" type="submit">Ekle</button>
-        </div>
-      </form>
-    `);
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      await DB.put("courses", {
-        id: DB.uid(),
-        name: String(data.get("name")).trim(),
-        code: String(data.get("code") || "").trim(),
-        createdAt: Date.now(),
-      });
-      render();
-    });
-    root.append(form);
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
