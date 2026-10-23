@@ -221,35 +221,8 @@ const App = (() => {
       `)
     );
     root.append(await courseNotesCard(course));
-    const form = el(`
-      <form class="card form-card">
-        <strong>Hafta ekle</strong>
-        <div class="row">
-          <label>Hafta no
-            <input name="weekNumber" type="number" min="1" value="${weeks.length + 1}" required />
-          </label>
-          <label style="flex:1">Başlık
-            <input name="title" placeholder="Örn. Listeler ve özyineleme" />
-          </label>
-          <button class="btn" type="submit">Ekle</button>
-        </div>
-      </form>
-    `);
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const data = new FormData(form);
-      await DB.put("weeks", {
-        id: DB.uid(),
-        courseId: course.id,
-        weekNumber: Number(data.get("weekNumber")),
-        title: String(data.get("title") || "").trim(),
-        createdAt: Date.now(),
-      });
-      render();
-    });
-    root.append(form);
     if (!weeks.length) {
-      root.append(el(`<div class="empty">Bu derse henüz hafta yok. Slayt yüklemek için bir hafta oluştur.</div>`));
+      root.append(el(`<div class="empty">Bu derste henüz hafta yok.</div>`));
       return;
     }
     const grid = el(`<div class="grid"></div>`);
