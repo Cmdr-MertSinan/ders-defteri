@@ -97,23 +97,28 @@ const App = (() => {
   }
 
   async function importMoodlePack() {
-    const existingFiles = await DB.all("files");
-    if (existingFiles.length) return;
     if (location.protocol === "file:") return;
+    const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json");
+      const res = await fetch("moodle-slides/manifest.json?v=6");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}`);
+          if (existingNames.has(item.file)) continue;
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=6`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
-          const file = new File([blob], item.file, { type: blob.type || "application/pdf" });
+          const isPptx = item.file.toLowerCase().endsWith(".pptx");
+          const type = isPptx
+            ? "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            : blob.type || "application/pdf";
+          const file = new File([blob], item.file, { type });
           await addSlideToCourse(
             { courseName: courseInfo.name, week: item.week, title: item.title },
             file
           );
+          existingNames.add(item.file);
         }
       }
     } catch (error) {

@@ -8,7 +8,8 @@
       "files": [
         { "week": 1, "title": "1. hafta", "file": "Anatomi 1. hafta.pdf" },
         { "week": 2, "title": "2. hafta", "file": "Anatomi 2. hafta.pdf" },
-        { "week": 3, "title": "3. hafta", "file": "Anatomi 3. hafta.pdf" }
+        { "week": 3, "title": "3. hafta", "file": "Anatomi 3. hafta.pdf" },
+        { "week": 4, "title": "4. hafta", "file": "Anatomi 4. hafta.pdf" }
       ]
     },
     {
@@ -17,7 +18,8 @@
       "files": [
         { "week": 1, "title": "1. hafta", "file": "Fizyoloji 1. hafta.pdf" },
         { "week": 2, "title": "2. hafta", "file": "Fizyoloji 2. hafta.pdf" },
-        { "week": 3, "title": "3. hafta", "file": "Fizyoloji 3. hafta.pdf" }
+        { "week": 3, "title": "3. hafta", "file": "Fizyoloji 3. hafta.pdf" },
+        { "week": 4, "title": "4. hafta", "file": "Fizyoloji 4. hafta.pdf" }
       ]
     },
     {
@@ -36,7 +38,8 @@
       "files": [
         { "week": 1, "title": "1. hafta", "file": "Matematik 1. hafta.pdf" },
         { "week": 2, "title": "2-3. hafta", "file": "Matematik 2-3. hafta.pdf" },
-        { "week": 4, "title": "4. hafta", "file": "Matematik 4. hafta.pdf" }
+        { "week": 4, "title": "4. hafta", "file": "Matematik 4. hafta.pdf" },
+        { "week": 5, "title": "5. hafta", "file": "Matematik 5. hafta.pdf" }
       ]
     },
     {
@@ -49,7 +52,9 @@
         { "week": 4, "title": "4. hafta", "file": "Halk Sagligi 4. hafta.pdf" },
         { "week": 4, "title": "4. hafta ek 1", "file": "Halk Sagligi 4. hafta ek 1.pdf" },
         { "week": 4, "title": "4. hafta ek 2", "file": "Halk Sagligi 4. hafta ek 2.pdf" },
-        { "week": 5, "title": "5. hafta", "file": "Halk Sagligi 5. hafta.pdf" }
+        { "week": 5, "title": "5. hafta", "file": "Halk Sagligi 5. hafta.pdf" },
+        { "week": 6, "title": "6. hafta", "file": "Halk Sagligi 6. hafta.pdf" },
+        { "week": 7, "title": "7. hafta", "file": "Halk Sagligi 7. hafta.pdf" }
       ]
     },
     {
@@ -57,7 +62,8 @@
       "code": "ORTK115",
       "files": [
         { "week": 1, "title": "1. hafta", "file": "Sosyoloji 1. hafta.pptx" },
-        { "week": 2, "title": "2. hafta", "file": "Sosyoloji 2. hafta.pptx" }
+        { "week": 2, "title": "2. hafta", "file": "Sosyoloji 2. hafta.pptx" },
+        { "week": 3, "title": "3-4. hafta", "file": "Sosyoloji 3-4. hafta.pptx" }
       ]
     }
   ]
