@@ -24,6 +24,21 @@ const App = (() => {
     render();
   });
 
+  window.addEventListener("keydown", (event) => {
+    if (!viewerSession?.goTo) return;
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+    const target = event.target;
+    if (target && (target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+    if (target && target.tagName === "INPUT" && target.type !== "file") return;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      viewerSession.goTo(viewerSession.page - 1);
+    } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      viewerSession.goTo(viewerSession.page + 1);
+    }
+  });
+
   function el(html) {
     const wrap = document.createElement("div");
     wrap.innerHTML = html.trim();
@@ -138,6 +153,8 @@ const App = (() => {
   }
 
   async function render() {
+    const onSlides = route.name === "week" && route.tab !== "summary";
+    if (!onSlides && viewerSession) viewerSession.goTo = null;
     await DB.open();
     const existingFiles = await DB.all("files");
     if (!existingFiles.length && location.protocol !== "file:") {
@@ -417,6 +434,7 @@ const App = (() => {
           }
         };
         if (nav) nav.hidden = viewerSession.total <= 1;
+        viewerSession.goTo = goTo;
         prev.onclick = () => goTo(viewerSession.page - 1);
         next.onclick = () => goTo(viewerSession.page + 1);
         await goTo(1);
@@ -443,6 +461,7 @@ const App = (() => {
           }
         };
         if (nav) nav.hidden = viewerSession.total <= 1;
+        viewerSession.goTo = goTo;
         prev.onclick = () => goTo(viewerSession.page - 1);
         next.onclick = () => goTo(viewerSession.page + 1);
         await goTo(1);
