@@ -30,10 +30,10 @@ const App = (() => {
     const target = event.target;
     if (target && (target.tagName === "TEXTAREA" || target.isContentEditable)) return;
     if (target && target.tagName === "INPUT" && target.type !== "file") return;
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    if (event.key === "ArrowLeft") {
       event.preventDefault();
       viewerSession.goTo(viewerSession.page - 1);
-    } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    } else if (event.key === "ArrowRight") {
       event.preventDefault();
       viewerSession.goTo(viewerSession.page + 1);
     }
