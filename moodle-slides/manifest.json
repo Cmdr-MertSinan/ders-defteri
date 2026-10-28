@@ -29,7 +29,8 @@
         { "week": 1, "title": "1. hafta", "file": "Mikrobiyoloji 1. hafta.pdf" },
         { "week": 2, "title": "2. hafta", "file": "Mikrobiyoloji 2. hafta.pdf" },
         { "week": 3, "title": "3. hafta", "file": "Mikrobiyoloji 3. hafta.pdf" },
-        { "week": 4, "title": "4. hafta", "file": "Mikrobiyoloji 4. hafta.pdf" }
+        { "week": 4, "title": "4. hafta", "file": "Mikrobiyoloji 4. hafta.pdf" },
+        { "week": 5, "title": "5. hafta", "file": "Mikrobiyoloji 5. hafta.pdf" }
       ]
     },
     {
