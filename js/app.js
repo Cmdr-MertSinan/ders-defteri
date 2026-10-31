@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=10");
+      const res = await fetch("moodle-slides/manifest.json?v=11");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=10`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=11`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -166,6 +166,137 @@ const App = (() => {
     if (route.name === "week") return renderWeek();
   }
 
+  const MONTHS_TR = [
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
+  ];
+  const WEEKDAYS_TR = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+  const today = new Date();
+  let calView = { year: today.getFullYear(), month: today.getMonth() };
+  let calSelected = dateKey(today);
+
+  function dateKey(value) {
+    const d = value instanceof Date ? value : new Date(value);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function parseDateKey(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function formatDayLabel(key) {
+    const d = parseDateKey(key);
+    return `${d.getDate()} ${MONTHS_TR[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  async function gymCalendarCard() {
+    const notes = await DB.all("dayNotes");
+    const noted = new Set(notes.filter((item) => (item.text || "").trim()).map((item) => item.date));
+    const todayKey = dateKey(new Date());
+    const first = new Date(calView.year, calView.month, 1);
+    const startPad = (first.getDay() + 6) % 7;
+    const daysInMonth = new Date(calView.year, calView.month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < startPad; i += 1) cells.push(null);
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push(dateKey(new Date(calView.year, calView.month, day)));
+    }
+    const card = el(`
+      <section class="card form-card gym-calendar">
+        <div class="cal-toolbar">
+          <div>
+            <strong>Spor takvimi</strong>
+            <p class="meta">Güne tıkla, o gün sporda yaptıklarını yaz. Otomatik kaydedilir.</p>
+          </div>
+          <div class="row cal-nav">
+            <button class="btn secondary" id="cal-prev" type="button" aria-label="Önceki ay">‹</button>
+            <span class="cal-month">${MONTHS_TR[calView.month]} ${calView.year}</span>
+            <button class="btn secondary" id="cal-next" type="button" aria-label="Sonraki ay">›</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-grid">
+          ${WEEKDAYS_TR.map((name) => `<span class="cal-weekday">${name}</span>`).join("")}
+          ${cells
+            .map((key) => {
+              if (!key) return `<span class="cal-empty"></span>`;
+              const day = Number(key.slice(-2));
+              const classes = [
+                "cal-day",
+                key === todayKey ? "today" : "",
+                key === calSelected ? "selected" : "",
+                noted.has(key) ? "has-note" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return `<button class="${classes}" type="button" data-day="${key}">${day}</button>`;
+            })
+            .join("")}
+        </div>
+        <label>
+          ${formatDayLabel(calSelected)}
+          <textarea id="gym-note" rows="5" placeholder="O gün sporda ne yaptın? Set, kilo, koşu…"></textarea>
+        </label>
+      </section>
+    `);
+    const area = card.querySelector("#gym-note");
+    const current = notes.find((item) => item.date === calSelected);
+    area.value = current?.text || "";
+    let timer = null;
+    async function saveNote() {
+      clearTimeout(timer);
+      await DB.put("dayNotes", {
+        date: calSelected,
+        text: area.value,
+        updatedAt: Date.now(),
+      });
+    }
+    async function replaceCalendar() {
+      const next = await gymCalendarCard();
+      card.replaceWith(next);
+    }
+    area.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(saveNote, 250);
+    });
+    card.querySelector("#cal-prev").addEventListener("click", async () => {
+      await saveNote();
+      calView.month -= 1;
+      if (calView.month < 0) {
+        calView.month = 11;
+        calView.year -= 1;
+      }
+      replaceCalendar();
+    });
+    card.querySelector("#cal-next").addEventListener("click", async () => {
+      await saveNote();
+      calView.month += 1;
+      if (calView.month > 11) {
+        calView.month = 0;
+        calView.year += 1;
+      }
+      replaceCalendar();
+    });
+    card.querySelectorAll("[data-day]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await saveNote();
+        calSelected = button.dataset.day;
+        replaceCalendar();
+      });
+    });
+    return card;
+  }
+
   async function renderHome() {
     const courses = (await DB.all("courses")).sort((a, b) => b.createdAt - a.createdAt);
     root.innerHTML = "";
@@ -180,23 +311,25 @@ const App = (() => {
       `)
     );
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
+    root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
-      return;
+    } else {
+      const grid = el(`<div class="grid"></div>`);
+      for (const course of courses) {
+        const weeks = await DB.all("weeks", "byCourse", course.id);
+        const card = el(`
+          <button class="card clickable" type="button">
+            <h2>${escapeHtml(course.name)}</h2>
+            <div class="meta">${escapeHtml(course.code || "Ders kodu yok")} · ${weeks.length} hafta</div>
+          </button>
+        `);
+        card.addEventListener("click", () => go(`/course/${course.id}`));
+        grid.append(card);
+      }
+      root.append(grid);
     }
-    const grid = el(`<div class="grid"></div>`);
-    for (const course of courses) {
-      const weeks = await DB.all("weeks", "byCourse", course.id);
-      const card = el(`
-        <button class="card clickable" type="button">
-          <h2>${escapeHtml(course.name)}</h2>
-          <div class="meta">${escapeHtml(course.code || "Ders kodu yok")} · ${weeks.length} hafta</div>
-        </button>
-      `);
-      card.addEventListener("click", () => go(`/course/${course.id}`));
-      grid.append(card);
-    }
-    root.append(grid);
+    root.append(await gymCalendarCard());
   }
 
   async function courseNotesCard(course) {
