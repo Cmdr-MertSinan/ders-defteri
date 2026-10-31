@@ -1,8 +1,10 @@
 name: Cloud Teams join
 on:
   schedule:
-    # Thursday 17:58 Turkey (UTC+3)
+    # Monday / Thursday / Friday 17:58 Turkey (UTC+3)
+    - cron: "58 14 * * 1"
     - cron: "58 14 * * 4"
+    - cron: "58 14 * * 5"
   workflow_dispatch:
 jobs:
   join:
@@ -23,6 +25,9 @@ jobs:
           TEAMS_USER: ${{ secrets.TEAMS_USER }}
           TEAMS_PASSWORD: ${{ secrets.TEAMS_PASSWORD }}
           TEAMS_JOIN_URL: ${{ secrets.TEAMS_JOIN_URL }}
+          TEAMS_JOIN_HALK: ${{ secrets.TEAMS_JOIN_HALK }}
+          TEAMS_JOIN_FIZYO: ${{ secrets.TEAMS_JOIN_FIZYO }}
+          TEAMS_JOIN_ANATOMI: ${{ secrets.TEAMS_JOIN_ANATOMI }}
           TEAMS_LEAVE_BELOW: "10"
           TEAMS_MAX_SECONDS: "14400"
         run: python scripts/cloud-teams-join.py

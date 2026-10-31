@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Join a Teams class and leave after attendance drops below 10."""
 
+import datetime
 import os
 import re
 import sys
 import time
+from zoneinfo import ZoneInfo
 
 
 def click_first(page, names, timeout=8000):
@@ -89,10 +91,21 @@ def wait_until_class_thins(page, threshold=10, max_seconds=14400):
     leave_meeting(page)
 
 
+def join_url_for_today():
+    turkey = datetime.datetime.now(ZoneInfo("Europe/Istanbul"))
+    weekday = turkey.weekday()  # Mon=0
+    by_day = {
+        0: os.environ.get("TEAMS_JOIN_HALK", "").strip(),
+        3: os.environ.get("TEAMS_JOIN_FIZYO", "").strip(),
+        4: os.environ.get("TEAMS_JOIN_ANATOMI", "").strip(),
+    }
+    return by_day.get(weekday, "") or os.environ.get("TEAMS_JOIN_URL", "").strip()
+
+
 def main():
     user = os.environ.get("TEAMS_USER", "").strip()
     password = os.environ.get("TEAMS_PASSWORD", "").strip()
-    url = os.environ.get("TEAMS_JOIN_URL", "").strip()
+    url = join_url_for_today()
     threshold = int(os.environ.get("TEAMS_LEAVE_BELOW", "10"))
     max_seconds = int(os.environ.get("TEAMS_MAX_SECONDS", "14400"))
     if not user or not password or not url:
