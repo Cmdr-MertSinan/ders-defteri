@@ -128,6 +128,8 @@ def main():
     url = join_url_for_today()
     threshold = int(os.environ.get("TEAMS_LEAVE_BELOW", "10"))
     max_seconds = int(os.environ.get("TEAMS_MAX_SECONDS", "14400"))
+    turkey = datetime.datetime.now(ZoneInfo("Europe/Istanbul"))
+    print(f"weekday={turkey.weekday()} max_seconds={max_seconds} url_ok={bool(url)}")
     if not user or not password or not url:
         print("missing secrets", file=sys.stderr)
         sys.exit(1)
