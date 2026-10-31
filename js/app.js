@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=11");
+      const res = await fetch("moodle-slides/manifest.json?v=12");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=11`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=12`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -305,7 +305,7 @@ const App = (() => {
         <header class="topbar">
           <div class="brand">
             <small>Haftalık slayt defteri</small>
-            <h1>Ders Defteri</h1>
+            <h1>Mert Ajanda</h1>
           </div>
         </header>
       `)

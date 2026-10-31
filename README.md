@@ -1,4 +1,4 @@
-# Ders Defteri
+# Mert Ajanda
 
 Haftalık ders slaytlarını saklayan, alt sekmede önemli başlıklar altında özetleyen yerel not defteri.
 
