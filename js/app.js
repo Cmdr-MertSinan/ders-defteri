@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=12");
+      const res = await fetch("moodle-slides/manifest.json?v=13");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=12`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=13`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -297,6 +297,264 @@ const App = (() => {
     return card;
   }
 
+  const BYDAY_TO_JS = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+  let liveJoinBusy = new Set();
+
+  function weekdayLabel(jsDay) {
+    return WEEKDAYS_TR[(jsDay + 6) % 7];
+  }
+
+  function parseHm(value) {
+    const parts = String(value || "").split(":");
+    return Number(parts[0]) * 60 + Number(parts[1] || 0);
+  }
+
+  function teamsJoinUrl(text) {
+    const match = String(text || "").match(
+      /https?:\/\/[^\s<>"']*(teams\.microsoft\.com|teams\.live\.com)[^\s<>"']*/i
+    );
+    return match ? match[0].replace(/[.,);]+$/g, "") : "";
+  }
+
+  function isLiveNow(item, clock = new Date()) {
+    if (!item.days?.includes(clock.getDay())) return false;
+    const start = parseHm(item.start);
+    const now = clock.getHours() * 60 + clock.getMinutes();
+    return now >= start - 2 && now <= start + 45;
+  }
+
+  function joinKey(item, clock = new Date()) {
+    return `${item.id}:${dateKey(clock)}:${item.start}`;
+  }
+
+  function openTeamsMeeting(url) {
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  }
+
+  async function requestLiveNotify() {
+    if (!("Notification" in window) || Notification.permission !== "default") return;
+    try {
+      await Notification.requestPermission();
+    } catch (error) {
+      /* tarayıcı izin vermeyebilir */
+    }
+  }
+
+  async function joinLiveClass(item, { notify = false } = {}) {
+    const key = joinKey(item);
+    if (liveJoinBusy.has(key)) return;
+    liveJoinBusy.add(key);
+    await DB.put("liveClasses", { ...item, lastJoined: key, updatedAt: Date.now() });
+    if (notify && "Notification" in window && Notification.permission === "granted") {
+      const note = new Notification(item.title, { body: "Canlı ders başlıyor. Katılmak için dokun.", tag: key });
+      note.onclick = () => openTeamsMeeting(item.joinUrl);
+    }
+    openTeamsMeeting(item.joinUrl);
+  }
+
+  async function tickLiveClasses() {
+    const items = await DB.all("liveClasses");
+    const clock = new Date();
+    for (const item of items) {
+      if (!item.autoJoin || !item.joinUrl) continue;
+      if (!isLiveNow(item, clock)) continue;
+      if (item.lastJoined === joinKey(item, clock)) continue;
+      await joinLiveClass(item, { notify: true });
+    }
+  }
+
+  function startLiveWatcher() {
+    tickLiveClasses();
+    setInterval(tickLiveClasses, 20000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) tickLiveClasses();
+    });
+  }
+
+  function unfoldIcs(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\n[ \t]/g, "");
+  }
+
+  function parseIcsEvents(text) {
+    const blocks = unfoldIcs(text).split(/BEGIN:VEVENT/i).slice(1);
+    const events = [];
+    for (const block of blocks) {
+      const summary = (block.match(/^SUMMARY(?:;[^:]*)?:(.+)$/im) || [])[1]?.trim() || "Canlı ders";
+      const dt = (block.match(/^DTSTART(?:;[^:]*)?:(\d{8}T\d{6})/im) || [])[1];
+      const rrule = (block.match(/^RRULE:(.+)$/im) || [])[1] || "";
+      const url =
+        teamsJoinUrl((block.match(/^URL(?:;[^:]*)?:(.+)$/im) || [])[1] || "") ||
+        teamsJoinUrl(block);
+      if (!dt || !url) continue;
+      const start = `${dt.slice(9, 11)}:${dt.slice(11, 13)}`;
+      let days = [];
+      const byday = rrule.match(/BYDAY=([A-Z,]+)/i);
+      if (byday) {
+        days = byday[1]
+          .split(",")
+          .map((code) => BYDAY_TO_JS[code.trim().slice(-2)])
+          .filter((day) => day !== undefined);
+      }
+      if (!days.length) {
+        const y = Number(dt.slice(0, 4));
+        const mo = Number(dt.slice(4, 6)) - 1;
+        const d = Number(dt.slice(6, 8));
+        days = [new Date(y, mo, d).getDay()];
+      }
+      events.push({ title: summary.replace(/\\,/g, ","), start, days, joinUrl: url });
+    }
+    return events;
+  }
+
+  async function liveClassesCard() {
+    const items = (await DB.all("liveClasses")).sort(
+      (a, b) => parseHm(a.start) - parseHm(b.start) || a.title.localeCompare(b.title, "tr")
+    );
+    const clock = new Date();
+    const todayItems = items.filter((item) => item.days?.includes(clock.getDay()));
+    const card = el(`
+      <section class="card form-card live-card">
+        <div>
+          <strong>Canlı dersler</strong>
+          <p class="meta">Teams şifreni buraya yazma. Toplantı linkini yapıştır; ajanda açıkken saat gelince otomatik katılır.</p>
+        </div>
+        <div class="live-today" id="live-today"></div>
+        <details class="live-add">
+          <summary>Teams dersi ekle</summary>
+          <label>Ders adı<input id="live-title" type="text" placeholder="Anatomi" /></label>
+          <div class="day-picks" id="live-days">
+            ${[1, 2, 3, 4, 5, 6, 0]
+              .map(
+                (day) =>
+                  `<label class="day-pick"><input type="checkbox" value="${day}" />${weekdayLabel(day)}</label>`
+              )
+              .join("")}
+          </div>
+          <label>Saat<input id="live-start" type="time" value="09:00" /></label>
+          <label>Teams katılma linki<input id="live-url" type="text" placeholder="https://teams.microsoft.com/l/meetup-join/…" /></label>
+          <label class="inline-check"><input id="live-auto" type="checkbox" checked /> Saat gelince otomatik katıl</label>
+          <div class="row">
+            <button class="btn" id="live-save" type="button">Kaydet</button>
+            <label class="btn secondary live-ics">Takvim dosyası (.ics)<input id="live-ics" type="file" accept=".ics,text/calendar" hidden /></label>
+          </div>
+        </details>
+        <div class="live-all" id="live-all"></div>
+      </section>
+    `);
+    const todayBox = card.querySelector("#live-today");
+    if (!todayItems.length) {
+      todayBox.append(el(`<p class="status">Bugün kayıtlı canlı ders yok.</p>`));
+    } else {
+      for (const item of todayItems) {
+        const live = isLiveNow(item, clock);
+        const row = el(`
+          <div class="live-row ${live ? "now" : ""}">
+            <div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <div class="meta">${item.start} · ${item.autoJoin ? "otomatik katıl açık" : "manuel"}</div>
+            </div>
+            <a class="btn ${live ? "" : "secondary"}" href="${escapeHtml(item.joinUrl)}" target="_blank" rel="noopener">Katıl</a>
+          </div>
+        `);
+        todayBox.append(row);
+      }
+    }
+    const allBox = card.querySelector("#live-all");
+    for (const item of items) {
+      const row = el(`
+        <div class="file-row">
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <div class="meta">${(item.days || []).map(weekdayLabel).join(", ")} · ${item.start}</div>
+          </div>
+          <div class="row">
+            <button class="btn ghost" data-toggle="${item.id}" type="button">${item.autoJoin ? "Oto açık" : "Oto kapalı"}</button>
+            <button class="btn ghost" data-del="${item.id}" type="button">Sil</button>
+          </div>
+        </div>
+      `);
+      allBox.append(row);
+    }
+    async function redraw() {
+      const next = await liveClassesCard();
+      card.replaceWith(next);
+    }
+    card.querySelector("#live-save").addEventListener("click", async () => {
+      const title = card.querySelector("#live-title").value.trim();
+      const joinUrl = teamsJoinUrl(card.querySelector("#live-url").value) || card.querySelector("#live-url").value.trim();
+      const days = [...card.querySelectorAll("#live-days input:checked")].map((input) => Number(input.value));
+      const start = card.querySelector("#live-start").value;
+      if (!title || !joinUrl || !days.length || !start) {
+        state.error = "Ders adı, gün, saat ve Teams linki gerekli.";
+        render();
+        return;
+      }
+      if (card.querySelector("#live-auto").checked) await requestLiveNotify();
+      await DB.put("liveClasses", {
+        id: DB.uid(),
+        title,
+        days,
+        start,
+        joinUrl,
+        autoJoin: card.querySelector("#live-auto").checked,
+        lastJoined: "",
+        createdAt: Date.now(),
+      });
+      state.error = "";
+      redraw();
+    });
+    card.querySelector("#live-ics").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const events = parseIcsEvents(await file.text());
+      if (!events.length) {
+        state.error = "Dosyada Teams katılma linki bulunan ders bulunamadı.";
+        render();
+        return;
+      }
+      await requestLiveNotify();
+      for (const eventItem of events) {
+        await DB.put("liveClasses", {
+          id: DB.uid(),
+          title: eventItem.title,
+          days: eventItem.days,
+          start: eventItem.start,
+          joinUrl: eventItem.joinUrl,
+          autoJoin: true,
+          lastJoined: "",
+          createdAt: Date.now(),
+        });
+      }
+      state.error = "";
+      redraw();
+    });
+    allBox.querySelectorAll("[data-toggle]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const item = items.find((entry) => entry.id === button.dataset.toggle);
+        if (!item) return;
+        if (!item.autoJoin) await requestLiveNotify();
+        await DB.put("liveClasses", { ...item, autoJoin: !item.autoJoin });
+        redraw();
+      });
+    });
+    allBox.querySelectorAll("[data-del]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await DB.del("liveClasses", button.dataset.del);
+        redraw();
+      });
+    });
+    return card;
+  }
+
   async function renderHome() {
     const courses = (await DB.all("courses")).sort((a, b) => b.createdAt - a.createdAt);
     root.innerHTML = "";
@@ -329,6 +587,7 @@ const App = (() => {
       }
       root.append(grid);
     }
+    root.append(await liveClassesCard());
     root.append(await gymCalendarCard());
   }
 
@@ -727,7 +986,12 @@ const App = (() => {
       .save();
   }
 
-  return { start: render };
+  return {
+    start: async () => {
+      await render();
+      startLiveWatcher();
+    },
+  };
 })();
 
 App.start();

@@ -136,8 +136,67 @@ button {
   gap: 14px;
 }
 
+.live-card,
 .gym-calendar {
   margin-top: 22px;
+}
+
+.live-add {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+}
+
+.live-add summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.live-add[open] summary {
+  margin-bottom: 10px;
+}
+
+.day-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.day-pick,
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.live-today {
+  display: grid;
+  gap: 8px;
+}
+
+.live-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.live-row.now {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.live-ics {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
 }
 
 .cal-toolbar {
