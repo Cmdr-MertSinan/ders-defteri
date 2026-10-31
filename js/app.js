@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=14");
+      const res = await fetch("moodle-slides/manifest.json?v=15");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=14`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=15`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -309,11 +309,34 @@ const App = (() => {
     return Number(parts[0]) * 60 + Number(parts[1] || 0);
   }
 
-  function teamsJoinUrl(text) {
+  function extractTeamsUrl(text) {
     const match = String(text || "").match(
-      /https?:\/\/[^\s<>"']*(teams\.microsoft\.com|teams\.live\.com)[^\s<>"']*/i
+      /(?:https?:\/\/|msteams:\/\/)[^\s<>"']*(teams\.microsoft\.com|teams\.live\.com)[^\s<>"']*/i
     );
     return match ? match[0].replace(/[.,);]+$/g, "") : "";
+  }
+
+  function normalizeTeamsMeetingUrl(text) {
+    const raw = extractTeamsUrl(text) || String(text || "").trim();
+    if (!raw) return "";
+    const href = raw.replace(/^msteams:/i, "https:");
+    let parsed;
+    try {
+      parsed = new URL(href);
+    } catch (error) {
+      return raw;
+    }
+    const teamMatch = parsed.pathname.match(/\/l\/(?:team|channel)\/([^/]+)/i);
+    if (!teamMatch) return parsed.href;
+    const thread = teamMatch[1];
+    const tenant = parsed.searchParams.get("tenantId") || "";
+    const context = tenant ? encodeURIComponent(JSON.stringify({ Tid: tenant })) : "";
+    return `https://teams.microsoft.com/l/meetup-join/${thread}/0${context ? `?context=${context}` : ""}`;
+  }
+
+  function teamsJoinUrl(text) {
+    const found = extractTeamsUrl(text);
+    return found ? normalizeTeamsMeetingUrl(found) : "";
   }
 
   function isLiveNow(item, clock = new Date()) {
@@ -328,7 +351,7 @@ const App = (() => {
   }
 
   function teamsAppUrl(url) {
-    const raw = String(url || "").trim();
+    const raw = normalizeTeamsMeetingUrl(url);
     if (!raw) return "";
     if (/^msteams:/i.test(raw)) return raw;
     try {
@@ -364,12 +387,23 @@ const App = (() => {
     const key = joinKey(item);
     if (liveJoinBusy.has(key)) return;
     liveJoinBusy.add(key);
-    await DB.put("liveClasses", { ...item, lastJoined: key, updatedAt: Date.now() });
+    const joinUrl = normalizeTeamsMeetingUrl(item.joinUrl) || item.joinUrl;
+    const saved = { ...item, joinUrl, lastJoined: key, updatedAt: Date.now() };
+    await DB.put("liveClasses", saved);
     if (notify && "Notification" in window && Notification.permission === "granted") {
       const note = new Notification(item.title, { body: "Canlı ders başlıyor. Katılmak için dokun.", tag: key });
-      note.onclick = () => openTeamsMeeting(item.joinUrl);
+      note.onclick = () => openTeamsMeeting(joinUrl);
     }
-    openTeamsMeeting(item.joinUrl);
+    openTeamsMeeting(joinUrl);
+  }
+
+  async function migrateLiveClassUrls() {
+    const items = await DB.all("liveClasses");
+    for (const item of items) {
+      const joinUrl = normalizeTeamsMeetingUrl(item.joinUrl);
+      if (!joinUrl || joinUrl === item.joinUrl) continue;
+      await DB.put("liveClasses", { ...item, joinUrl, updatedAt: Date.now() });
+    }
   }
 
   async function tickLiveClasses() {
@@ -384,7 +418,7 @@ const App = (() => {
   }
 
   function startLiveWatcher() {
-    tickLiveClasses();
+    migrateLiveClassUrls().then(() => tickLiveClasses());
     setInterval(tickLiveClasses, 20000);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) tickLiveClasses();
@@ -1001,6 +1035,7 @@ const App = (() => {
 
   return {
     start: async () => {
+      await migrateLiveClassUrls();
       await render();
       startLiveWatcher();
     },

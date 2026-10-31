@@ -2,11 +2,31 @@
 """Join a Teams class and leave after attendance drops below 10."""
 
 import datetime
+import json
 import os
 import re
 import sys
 import time
+from urllib.parse import parse_qs, quote, urlparse
 from zoneinfo import ZoneInfo
+
+
+def meeting_join_url(url):
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    href = re.sub(r"^msteams:", "https:", raw, flags=re.I)
+    parsed = urlparse(href)
+    match = re.search(r"/l/(?:team|channel)/([^/]+)", parsed.path, re.I)
+    if not match:
+        return raw
+    thread = match.group(1)
+    tenant = (parse_qs(parsed.query).get("tenantId") or [""])[0]
+    context = quote(json.dumps({"Tid": tenant}, separators=(",", ":"))) if tenant else ""
+    join = f"https://teams.microsoft.com/l/meetup-join/{thread}/0"
+    if context:
+        join += f"?context={context}"
+    return join
 
 
 def click_first(page, names, timeout=8000):
@@ -99,7 +119,7 @@ def join_url_for_today():
         3: os.environ.get("TEAMS_JOIN_FIZYO", "").strip(),
         4: os.environ.get("TEAMS_JOIN_ANATOMI", "").strip(),
     }
-    return by_day.get(weekday, "") or os.environ.get("TEAMS_JOIN_URL", "").strip()
+    return meeting_join_url(by_day.get(weekday, "") or os.environ.get("TEAMS_JOIN_URL", "").strip())
 
 
 def main():

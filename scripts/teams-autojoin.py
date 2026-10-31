@@ -5,7 +5,9 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import subprocess
+from urllib.parse import parse_qs, quote, urlparse
 
 ROOT = pathlib.Path("/Users/mert/Projects/ders-defteri")
 CONFIG = ROOT / "live-classes.local.json"
@@ -31,8 +33,26 @@ DAY_MAP = {
 }
 
 
+def meeting_join_url(url):
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    href = re.sub(r"^msteams:", "https:", raw, flags=re.I)
+    parsed = urlparse(href)
+    match = re.search(r"/l/(?:team|channel)/([^/]+)", parsed.path, re.I)
+    if not match:
+        return raw
+    thread = match.group(1)
+    tenant = (parse_qs(parsed.query).get("tenantId") or [""])[0]
+    context = quote(json.dumps({"Tid": tenant}, separators=(",", ":"))) if tenant else ""
+    join = f"https://teams.microsoft.com/l/meetup-join/{thread}/0"
+    if context:
+        join += f"?context={context}"
+    return join
+
+
 def app_url(url):
-    url = (url or "").strip()
+    url = meeting_join_url(url)
     if not url:
         return ""
     if url.startswith("msteams:"):
