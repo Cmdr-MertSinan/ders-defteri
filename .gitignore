@@ -4,3 +4,6 @@
 .vercel
 node_modules
 *.zip
+.env
+*.local.json
+moodle.local.json

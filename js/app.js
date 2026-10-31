@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=13");
+      const res = await fetch("moodle-slides/manifest.json?v=14");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=13`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=14`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -327,12 +327,25 @@ const App = (() => {
     return `${item.id}:${dateKey(clock)}:${item.start}`;
   }
 
+  function teamsAppUrl(url) {
+    const raw = String(url || "").trim();
+    if (!raw) return "";
+    if (/^msteams:/i.test(raw)) return raw;
+    try {
+      const parsed = new URL(raw);
+      parsed.searchParams.delete("anon");
+      parsed.searchParams.delete("anonymous");
+      return `msteams://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch (error) {
+      return raw.replace(/^https?:\/\//i, "msteams://");
+    }
+  }
+
   function openTeamsMeeting(url) {
-    if (!url) return;
+    const appUrl = teamsAppUrl(url);
+    if (!appUrl) return;
     const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener";
+    link.href = appUrl;
     document.body.append(link);
     link.click();
     link.remove();
@@ -425,7 +438,7 @@ const App = (() => {
       <section class="card form-card live-card">
         <div>
           <strong>Canlı dersler</strong>
-          <p class="meta">Teams şifreni buraya yazma. Toplantı linkini yapıştır; ajanda açıkken saat gelince otomatik katılır.</p>
+          <p class="meta">Katılınca tarayıcıda misafir açılmaz; telefonda/bilgisayarda senin Teams uygulaman açılır. Yoklama için Teams’te 26121188@eul.edu.tr hesabın açık kalsın.</p>
         </div>
         <div class="live-today" id="live-today"></div>
         <details class="live-add">
@@ -462,7 +475,7 @@ const App = (() => {
               <strong>${escapeHtml(item.title)}</strong>
               <div class="meta">${item.start} · ${item.autoJoin ? "otomatik katıl açık" : "manuel"}</div>
             </div>
-            <a class="btn ${live ? "" : "secondary"}" href="${escapeHtml(item.joinUrl)}" target="_blank" rel="noopener">Katıl</a>
+            <a class="btn ${live ? "" : "secondary"}" href="${escapeHtml(teamsAppUrl(item.joinUrl))}">Katıl</a>
           </div>
         `);
         todayBox.append(row);
