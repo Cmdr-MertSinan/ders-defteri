@@ -1,0 +1,11 @@
+{
+  "classes": [
+    {
+      "title": "Ders adı",
+      "days": ["pzt", "sal", "çar", "per", "cum"],
+      "start": "09:00",
+      "joinUrl": "https://teams.microsoft.com/l/meetup-join/...",
+      "autoJoin": true
+    }
+  ]
+}

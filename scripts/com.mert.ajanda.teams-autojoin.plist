@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mert.ajanda.teams-autojoin</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Library/Frameworks/Python.framework/Versions/3.15/bin/python3</string>
+    <string>/Users/mert/Projects/ders-defteri/scripts/teams-autojoin.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/mert/Projects/ders-defteri</string>
+  <key>StartInterval</key>
+  <integer>60</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/mert/Library/Logs/mert-ajanda/teams-autojoin.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/mert/Library/Logs/mert-ajanda/teams-autojoin.err</string>
+</dict>
+</plist>
