@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Join a Teams class from GitHub's cloud runners using repo secrets."""
+"""Join a Teams class and leave after attendance drops below 10."""
 
 import os
+import re
 import sys
 import time
 
@@ -30,11 +31,70 @@ def fill_first(page, selectors, value):
     return False
 
 
+def participant_count(page):
+    click_first(
+        page,
+        ["Katılımcılar", "Kişiler", "People", "Show participants", "Roster"],
+        timeout=1500,
+    )
+    time.sleep(1)
+    chunks = []
+    try:
+        chunks.append(page.inner_text("body"))
+    except Exception:
+        pass
+    try:
+        labels = page.eval_on_selector_all(
+            "[aria-label]",
+            "els => els.map(el => el.getAttribute('aria-label') || '')",
+        )
+        chunks.append("\n".join(labels or []))
+    except Exception:
+        pass
+    text = "\n".join(chunks)
+    found = [
+        int(num)
+        for num in re.findall(
+            r"(\d+)\s*(?:katılımcı|kişiler|participants?|people)\b",
+            text,
+            flags=re.I,
+        )
+    ]
+    return max(found) if found else None
+
+
+def leave_meeting(page):
+    click_first(
+        page,
+        ["Ayrıl", "Leave", "Hang up", "Çağrıyı sonlandır", "Leave call", "Leave meeting"],
+        timeout=8000,
+    )
+
+
+def wait_until_class_thins(page, threshold=10, max_seconds=14400):
+    seen_full = False
+    deadline = time.time() + max_seconds
+    while time.time() < deadline:
+        count = participant_count(page)
+        if count is not None:
+            print(f"participants={count}")
+            if count >= threshold:
+                seen_full = True
+            elif seen_full and count < threshold:
+                print("class_thinned")
+                leave_meeting(page)
+                return
+        time.sleep(20)
+    print("max_time")
+    leave_meeting(page)
+
+
 def main():
     user = os.environ.get("TEAMS_USER", "").strip()
     password = os.environ.get("TEAMS_PASSWORD", "").strip()
     url = os.environ.get("TEAMS_JOIN_URL", "").strip()
-    stay_seconds = int(os.environ.get("TEAMS_STAY_SECONDS", "900"))
+    threshold = int(os.environ.get("TEAMS_LEAVE_BELOW", "10"))
+    max_seconds = int(os.environ.get("TEAMS_MAX_SECONDS", "14400"))
     if not user or not password or not url:
         print("missing secrets", file=sys.stderr)
         sys.exit(1)
@@ -80,7 +140,7 @@ def main():
             timeout=15000,
         )
         print("joined_or_attempted")
-        time.sleep(max(30, stay_seconds))
+        wait_until_class_thins(page, threshold=threshold, max_seconds=max_seconds)
         context.close()
         browser.close()
 

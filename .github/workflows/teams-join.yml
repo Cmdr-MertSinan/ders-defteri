@@ -7,7 +7,7 @@ on:
 jobs:
   join:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -23,5 +23,6 @@ jobs:
           TEAMS_USER: ${{ secrets.TEAMS_USER }}
           TEAMS_PASSWORD: ${{ secrets.TEAMS_PASSWORD }}
           TEAMS_JOIN_URL: ${{ secrets.TEAMS_JOIN_URL }}
-          TEAMS_STAY_SECONDS: "900"
+          TEAMS_LEAVE_BELOW: "10"
+          TEAMS_MAX_SECONDS: "14400"
         run: python scripts/cloud-teams-join.py
