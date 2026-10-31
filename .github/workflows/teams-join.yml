@@ -1,0 +1,27 @@
+name: Cloud Teams join
+on:
+  schedule:
+    # Thursday 17:58 Turkey (UTC+3)
+    - cron: "58 14 * * 4"
+  workflow_dispatch:
+jobs:
+  join:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Join class
+        env:
+          TEAMS_USER: ${{ secrets.TEAMS_USER }}
+          TEAMS_PASSWORD: ${{ secrets.TEAMS_PASSWORD }}
+          TEAMS_JOIN_URL: ${{ secrets.TEAMS_JOIN_URL }}
+          TEAMS_STAY_SECONDS: "900"
+        run: python scripts/cloud-teams-join.py
