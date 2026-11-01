@@ -156,12 +156,6 @@ const App = (() => {
     const onSlides = route.name === "week" && route.tab !== "summary";
     if (!onSlides && viewerSession) viewerSession.goTo = null;
     await DB.open();
-    const existingFiles = await DB.all("files");
-    if (!existingFiles.length && location.protocol !== "file:") {
-      root.innerHTML = `<div class="empty">Slaytlar yükleniyor. İlk açılışta biraz sürebilir…</div>`;
-    }
-    await importMoodlePack();
-    await importLivePack();
     if (!cloudReady) {
       cloudReady = true;
       try {
@@ -170,9 +164,22 @@ const App = (() => {
         console.warn("cloud pull", error);
       }
     }
-    if (route.name === "home") return renderHome();
-    if (route.name === "course") return renderCourse();
-    if (route.name === "week") return renderWeek();
+    try {
+      await importLivePack();
+    } catch (error) {
+      console.warn("live pack", error);
+    }
+    if (route.name === "home") await renderHome();
+    else if (route.name === "course") await renderCourse();
+    else if (route.name === "week") await renderWeek();
+    if (!state.packStarted && location.protocol !== "file:") {
+      state.packStarted = true;
+      importMoodlePack()
+        .then(async () => {
+          if (route.name === "home") await renderHome();
+        })
+        .catch((error) => console.warn("Moodle paketi", error));
+    }
   }
 
   const MONTHS_TR = [
@@ -391,7 +398,6 @@ const App = (() => {
         console.warn("cloud push", error);
       }
       await pullCloudNotes();
-      await importMoodlePack();
       await importLivePack();
       state.sync = "Kaydedildi.";
       state.error = "";
