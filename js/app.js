@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=17");
+      const res = await fetch("moodle-slides/manifest.json?v=18");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=17`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=18`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -284,17 +284,10 @@ const App = (() => {
   }
 
   async function pullCloudNotes() {
-    const headers = { Accept: "application/vnd.github+json" };
-    const token = getSyncToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(
-      `https://api.github.com/repos/${GH_REPO}/contents/${CLOUD_NOTES_PATH}?ts=${Date.now()}`,
-      { headers, cache: "no-store" }
-    );
+    if (location.protocol === "file:") return;
+    const res = await fetch(`${CLOUD_NOTES_PATH}?ts=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return;
-    const body = await res.json();
-    cloudSha = body.sha || "";
-    const cloud = JSON.parse(base64ToText(body.content));
+    const cloud = await res.json();
     await applyCloudNotes(cloud);
   }
 
@@ -329,7 +322,6 @@ const App = (() => {
     });
     if ((res.status === 409 || res.status === 422) && !retried) {
       cloudSha = "";
-      await pullCloudNotes();
       return pushCloudNotes(true);
     }
     if (!res.ok) {
@@ -769,34 +761,6 @@ const App = (() => {
     );
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
-    if (!getSyncToken()) {
-      const syncCard = el(`
-        <section class="card form-card">
-          <strong>Telefonla aynı notlar</strong>
-          <p class="meta">Yazdıkların şimdi sadece bu tarayıcıda. Telefonda da görünsün diye bir kez GitHub jetonu kaydet: <a href="https://github.com/settings/tokens/new?description=Mert%20Ajanda&amp;scopes=public_repo" target="_blank" rel="noreferrer">jeton oluştur</a>, Generate token, kopyala, aşağıya yapıştır.</p>
-          <label>GitHub jetonu<input id="sync-token" type="password" autocomplete="off" /></label>
-          <button class="btn" id="sync-save" type="button">Kaydet ve notları gönder</button>
-        </section>
-      `);
-      syncCard.querySelector("#sync-save").addEventListener("click", async () => {
-        const token = syncCard.querySelector("#sync-token").value.trim();
-        if (!token) {
-          state.error = "Jeton boş olamaz.";
-          render();
-          return;
-        }
-        setSyncToken(token);
-        try {
-          await pullCloudNotes();
-          await pushCloudNotes();
-          state.error = "";
-        } catch (error) {
-          state.sync = `Telefona gönderilemedi: ${error.message || error}`;
-        }
-        render();
-      });
-      root.append(syncCard);
-    }
     root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
@@ -1221,6 +1185,16 @@ const App = (() => {
       await migrateLiveClassUrls();
       await render();
       startLiveWatcher();
+      document.addEventListener("visibilitychange", async () => {
+        if (document.hidden) return;
+        if (document.activeElement && document.activeElement.tagName === "TEXTAREA") return;
+        try {
+          await pullCloudNotes();
+          await render();
+        } catch (error) {
+          console.warn("cloud pull", error);
+        }
+      });
     },
   };
 })();
