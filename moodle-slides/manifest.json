@@ -20,7 +20,8 @@
         { "week": 2, "title": "2. hafta", "file": "Fizyoloji 2. hafta.pdf" },
         { "week": 3, "title": "3. hafta", "file": "Fizyoloji 3. hafta.pdf" },
         { "week": 4, "title": "4. hafta", "file": "Fizyoloji 4. hafta.pdf" },
-        { "week": 6, "title": "6. hafta", "file": "Fizyoloji 6. hafta.pdf" }
+        { "week": 6, "title": "6. hafta", "file": "Fizyoloji 6. hafta.pdf" },
+        { "week": 7, "title": "7. hafta", "file": "Fizyoloji 7. hafta.pdf" }
       ]
     },
     {
@@ -67,7 +68,8 @@
         { "week": 1, "title": "1. hafta", "file": "Sosyoloji 1. hafta.pptx" },
         { "week": 2, "title": "2. hafta", "file": "Sosyoloji 2. hafta.pptx" },
         { "week": 3, "title": "3-4. hafta", "file": "Sosyoloji 3-4. hafta.pptx" },
-        { "week": 5, "title": "5. hafta", "file": "Sosyoloji 5. hafta.pptx" }
+        { "week": 5, "title": "5. hafta", "file": "Sosyoloji 5. hafta.pptx" },
+        { "week": 6, "title": "6. hafta", "file": "Sosyoloji 6. hafta.pptx" }
       ]
     }
   ]
