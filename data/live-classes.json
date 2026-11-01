@@ -1,0 +1,25 @@
+{
+  "classes": [
+    {
+      "title": "Halk Sağlığı",
+      "days": ["pzt"],
+      "start": "18:00",
+      "joinUrl": "https://teams.microsoft.com/l/meetup-join/19%3AVy4jysKnZ3UaovuZjFN9DAOHoRRloiOT4bWDVJOxzvQ1%40thread.tacv2/0?context=%7B%22Tid%22%3A%220d04761a-06d5-44fd-9fbf-1ce5981114f2%22%7D",
+      "autoJoin": true
+    },
+    {
+      "title": "Fizyoloji",
+      "days": ["per"],
+      "start": "18:00",
+      "joinUrl": "https://teams.microsoft.com/meet/3843425000691570?p=zTRasW5hLGOurQEvA5",
+      "autoJoin": true
+    },
+    {
+      "title": "Anatomi",
+      "days": ["cum"],
+      "start": "18:00",
+      "joinUrl": "https://teams.microsoft.com/l/meetup-join/19%3Ah6jyvhfznfjavZGKETzHeJ3EOldDu6UTkL2GfLexK7c1%40thread.tacv2/0?context=%7B%22Tid%22%3A%220d04761a-06d5-44fd-9fbf-1ce5981114f2%22%7D",
+      "autoJoin": true
+    }
+  ]
+}

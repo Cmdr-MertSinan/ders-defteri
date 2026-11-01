@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=18");
+      const res = await fetch("moodle-slides/manifest.json?v=19");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=18`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=19`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -161,6 +161,7 @@ const App = (() => {
       root.innerHTML = `<div class="empty">Slaytlar yükleniyor. İlk açılışta biraz sürebilir…</div>`;
     }
     await importMoodlePack();
+    await importLivePack();
     if (!cloudReady) {
       cloudReady = true;
       try {
@@ -442,6 +443,76 @@ const App = (() => {
   }
 
   const BYDAY_TO_JS = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+  const LIVE_DAY = {
+    paz: 0,
+    sun: 0,
+    pzt: 1,
+    pazartesi: 1,
+    mon: 1,
+    sal: 2,
+    sali: 2,
+    salı: 2,
+    tue: 2,
+    car: 3,
+    çar: 3,
+    cars: 3,
+    wed: 3,
+    per: 4,
+    persembe: 4,
+    perşembe: 4,
+    thu: 4,
+    cum: 5,
+    cuma: 5,
+    fri: 5,
+    cmt: 6,
+    sat: 6,
+  };
+
+  function liveDays(days) {
+    return (days || [])
+      .map((raw) => {
+        if (typeof raw === "number") return raw;
+        return LIVE_DAY[String(raw).trim().toLowerCase()];
+      })
+      .filter((day) => day !== undefined);
+  }
+
+  async function importLivePack() {
+    if (location.protocol === "file:") return;
+    try {
+      const res = await fetch("data/live-classes.json?v=19");
+      if (!res.ok) return;
+      const pack = await res.json();
+      const existing = await DB.all("liveClasses");
+      for (const item of pack.classes || []) {
+        const days = liveDays(item.days);
+        const joinUrl = normalizeTeamsMeetingUrl(item.joinUrl) || item.joinUrl;
+        if (!item.title || !joinUrl || !days.length) continue;
+        const found = existing.find((entry) => entry.title === item.title && entry.start === item.start);
+        if (found) {
+          await DB.put("liveClasses", {
+            ...found,
+            days,
+            joinUrl,
+            autoJoin: item.autoJoin !== false,
+          });
+        } else {
+          await DB.put("liveClasses", {
+            id: DB.uid(),
+            title: item.title,
+            days,
+            start: item.start,
+            joinUrl,
+            autoJoin: item.autoJoin !== false,
+            lastJoined: "",
+            createdAt: Date.now(),
+          });
+        }
+      }
+    } catch (error) {
+      console.warn("Canlı ders paketi yüklenemedi", error);
+    }
+  }
   let liveJoinBusy = new Set();
 
   function weekdayLabel(jsDay) {
@@ -762,6 +833,7 @@ const App = (() => {
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
     root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
+    root.append(await liveClassesCard());
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
     } else {
@@ -779,7 +851,6 @@ const App = (() => {
       }
       root.append(grid);
     }
-    root.append(await liveClassesCard());
     root.append(await gymCalendarCard());
   }
 
