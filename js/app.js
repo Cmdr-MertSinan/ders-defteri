@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=15");
+      const res = await fetch("moodle-slides/manifest.json?v=16");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=15`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=16`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -161,6 +161,14 @@ const App = (() => {
       root.innerHTML = `<div class="empty">Slaytlar yükleniyor. İlk açılışta biraz sürebilir…</div>`;
     }
     await importMoodlePack();
+    if (!cloudReady) {
+      cloudReady = true;
+      try {
+        await pullCloudNotes();
+      } catch (error) {
+        console.warn("cloud pull", error);
+      }
+    }
     if (route.name === "home") return renderHome();
     if (route.name === "course") return renderCourse();
     if (route.name === "week") return renderWeek();
@@ -200,6 +208,149 @@ const App = (() => {
     return `${d.getDate()} ${MONTHS_TR[d.getMonth()]} ${d.getFullYear()}`;
   }
 
+  const GH_REPO = "Cmdr-MertSinan/ders-defteri";
+  const CLOUD_NOTES_PATH = "data/user-state.json";
+  let cloudSha = "";
+  let cloudTimer = 0;
+  let cloudReady = false;
+
+  function getSyncToken() {
+    try {
+      return localStorage.getItem("mertAjanda.syncToken") || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function setSyncToken(token) {
+    localStorage.setItem("mertAjanda.syncToken", String(token || "").trim());
+  }
+
+  function textToBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  function base64ToText(value) {
+    const binary = atob(String(value || "").replace(/\n/g, ""));
+    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function buildCloudNotes() {
+    const dayNotes = {};
+    for (const item of await DB.all("dayNotes")) {
+      dayNotes[item.date] = { text: item.text || "", updatedAt: item.updatedAt || 0 };
+    }
+    const courseNotes = {};
+    const courses = await DB.all("courses");
+    for (const item of await DB.all("notes")) {
+      const course = courses.find((entry) => entry.id === item.courseId);
+      const name = item.courseName || course?.name;
+      if (!name) continue;
+      courseNotes[name] = { text: item.text || "", updatedAt: item.updatedAt || 0 };
+    }
+    return { updatedAt: Date.now(), dayNotes, courseNotes };
+  }
+
+  async function applyCloudNotes(cloud) {
+    if (!cloud) return;
+    for (const [date, row] of Object.entries(cloud.dayNotes || {})) {
+      const local = await DB.get("dayNotes", date);
+      if (local && (local.updatedAt || 0) > (row.updatedAt || 0)) continue;
+      await DB.put("dayNotes", {
+        date,
+        text: row.text || "",
+        updatedAt: row.updatedAt || 0,
+      });
+    }
+    const courses = await DB.all("courses");
+    for (const [name, row] of Object.entries(cloud.courseNotes || {})) {
+      const course = courses.find((entry) => entry.name === name);
+      if (!course) continue;
+      const local = await DB.get("notes", course.id);
+      if (local && (local.updatedAt || 0) > (row.updatedAt || 0)) continue;
+      await DB.put("notes", {
+        courseId: course.id,
+        courseName: name,
+        text: row.text || "",
+        updatedAt: row.updatedAt || 0,
+      });
+    }
+  }
+
+  async function pullCloudNotes() {
+    const headers = { Accept: "application/vnd.github+json" };
+    const token = getSyncToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(
+      `https://api.github.com/repos/${GH_REPO}/contents/${CLOUD_NOTES_PATH}?ts=${Date.now()}`,
+      { headers, cache: "no-store" }
+    );
+    if (!res.ok) return;
+    const body = await res.json();
+    cloudSha = body.sha || "";
+    const cloud = JSON.parse(base64ToText(body.content));
+    await applyCloudNotes(cloud);
+  }
+
+  async function pushCloudNotes(retried = false) {
+    const token = getSyncToken();
+    if (!token) return false;
+    const payload = JSON.stringify(await buildCloudNotes(), null, 2);
+    const headers = {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+    if (!cloudSha) {
+      const current = await fetch(
+        `https://api.github.com/repos/${GH_REPO}/contents/${CLOUD_NOTES_PATH}`,
+        { headers, cache: "no-store" }
+      );
+      if (current.ok) {
+        const body = await current.json();
+        cloudSha = body.sha || "";
+      }
+    }
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${CLOUD_NOTES_PATH}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        message: "Sync ajanda notes",
+        content: textToBase64(payload),
+        sha: cloudSha || undefined,
+        branch: "main",
+      }),
+    });
+    if ((res.status === 409 || res.status === 422) && !retried) {
+      cloudSha = "";
+      await pullCloudNotes();
+      return pushCloudNotes(true);
+    }
+    if (!res.ok) {
+      const detail = await res.text();
+      throw new Error(detail.slice(0, 180) || `GitHub ${res.status}`);
+    }
+    const saved = await res.json();
+    cloudSha = saved.content?.sha || cloudSha;
+    state.sync = "Notlar telefonda da görünecek.";
+    return true;
+  }
+
+  function queueCloudPush() {
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(() => {
+      pushCloudNotes().catch((error) => {
+        state.sync = `Telefona gönderilemedi: ${error.message || error}`;
+      });
+    }, 900);
+  }
+
   async function gymCalendarCard() {
     const notes = await DB.all("dayNotes");
     const noted = new Set(notes.filter((item) => (item.text || "").trim()).map((item) => item.date));
@@ -217,7 +368,7 @@ const App = (() => {
         <div class="cal-toolbar">
           <div>
             <strong>Spor takvimi</strong>
-            <p class="meta">Güne tıkla, o gün sporda yaptıklarını yaz. Otomatik kaydedilir.</p>
+            <p class="meta">Güne tıkla, o gün sporda yaptıklarını yaz. Bilgisayarda yazınca telefonda da görünür.</p>
           </div>
           <div class="row cal-nav">
             <button class="btn secondary" id="cal-prev" type="button" aria-label="Önceki ay">‹</button>
@@ -260,6 +411,7 @@ const App = (() => {
         text: area.value,
         updatedAt: Date.now(),
       });
+      queueCloudPush();
     }
     async function replaceCalendar() {
       const next = await gymCalendarCard();
@@ -616,6 +768,35 @@ const App = (() => {
       `)
     );
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
+    if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
+    if (!getSyncToken()) {
+      const syncCard = el(`
+        <section class="card form-card">
+          <strong>Telefonla aynı notlar</strong>
+          <p class="meta">Yazdıkların şimdi sadece bu tarayıcıda. Telefonda da görünsün diye bir kez GitHub jetonu kaydet: <a href="https://github.com/settings/tokens/new?description=Mert%20Ajanda&amp;scopes=public_repo" target="_blank" rel="noreferrer">jeton oluştur</a>, Generate token, kopyala, aşağıya yapıştır.</p>
+          <label>GitHub jetonu<input id="sync-token" type="password" autocomplete="off" /></label>
+          <button class="btn" id="sync-save" type="button">Kaydet ve notları gönder</button>
+        </section>
+      `);
+      syncCard.querySelector("#sync-save").addEventListener("click", async () => {
+        const token = syncCard.querySelector("#sync-token").value.trim();
+        if (!token) {
+          state.error = "Jeton boş olamaz.";
+          render();
+          return;
+        }
+        setSyncToken(token);
+        try {
+          await pullCloudNotes();
+          await pushCloudNotes();
+          state.error = "";
+        } catch (error) {
+          state.sync = `Telefona gönderilemedi: ${error.message || error}`;
+        }
+        render();
+      });
+      root.append(syncCard);
+    }
     root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
@@ -643,7 +824,7 @@ const App = (() => {
     const card = el(`
       <div class="card form-card notes-card">
         <strong>Not defteri</strong>
-        <p class="meta">${escapeHtml(course.name)} için kendi notların. Otomatik kaydedilir.</p>
+        <p class="meta">${escapeHtml(course.name)} için kendi notların. Bilgisayarda yazınca telefonda da görünür.</p>
         <textarea id="course-notes" rows="8" placeholder="Ders notu, hatırlatma, özet kenarına yazdıkların…"></textarea>
       </div>
     `);
@@ -655,9 +836,11 @@ const App = (() => {
       timer = setTimeout(() => {
         DB.put("notes", {
           courseId: course.id,
+          courseName: course.name,
           text: area.value,
           updatedAt: Date.now(),
         });
+        queueCloudPush();
       }, 250);
     });
     return card;
