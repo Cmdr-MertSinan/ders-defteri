@@ -218,6 +218,7 @@ const App = (() => {
 
   const GH_REPO = "Cmdr-MertSinan/ders-defteri";
   const CLOUD_NOTES_PATH = "data/user-state.json";
+  const NOTES_SYNC_TOPIC = "neoclass-2ea2b0e3de749c573fd60ad016c8061f";
   let cloudSha = "";
   let cloudTimer = 0;
   let cloudReady = false;
@@ -293,16 +294,37 @@ const App = (() => {
 
   async function pullCloudNotes() {
     if (location.protocol === "file:") return;
+    try {
+      const api = await fetch(
+        `https://api.github.com/repos/${GH_REPO}/contents/${CLOUD_NOTES_PATH}?ref=main&ts=${Date.now()}`,
+        { headers: { Accept: "application/vnd.github.raw" }, cache: "no-store" }
+      );
+      if (api.ok) {
+        await applyCloudNotes(await api.json());
+        return;
+      }
+    } catch (error) {
+      console.warn("cloud api pull", error);
+    }
     const res = await fetch(`${CLOUD_NOTES_PATH}?ts=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return;
-    const cloud = await res.json();
-    await applyCloudNotes(cloud);
+    await applyCloudNotes(await res.json());
+  }
+
+  async function publishNotesRelay(payload) {
+    const res = await fetch(`https://ntfy.sh/${NOTES_SYNC_TOPIC}`, {
+      method: "POST",
+      body: payload,
+      headers: { Title: "neoclass-notes" },
+    });
+    if (!res.ok) throw new Error("Notlar gönderilemedi");
   }
 
   async function pushCloudNotes(retried = false) {
-    const token = getSyncToken();
-    if (!token) return false;
     const payload = JSON.stringify(await buildCloudNotes(), null, 2);
+    await publishNotesRelay(payload);
+    const token = getSyncToken();
+    if (!token) return true;
     const headers = {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
@@ -399,7 +421,7 @@ const App = (() => {
       }
       await pullCloudNotes();
       await importLivePack();
-      state.sync = "Kaydedildi.";
+      state.sync = "Kaydedildi. Bilgisayarda birkaç dakika içinde görünür.";
       state.error = "";
       await render();
     } catch (error) {
