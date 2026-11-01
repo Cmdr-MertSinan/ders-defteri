@@ -115,13 +115,13 @@ const App = (() => {
     if (location.protocol === "file:") return;
     const existingNames = new Set((await DB.all("files")).map((item) => item.name));
     try {
-      const res = await fetch("moodle-slides/manifest.json?v=19");
+      const res = await fetch("moodle-slides/manifest.json?v=20");
       if (!res.ok) return;
       const pack = await res.json();
       for (const courseInfo of pack.courses) {
         for (const item of courseInfo.files) {
           if (existingNames.has(item.file)) continue;
-          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=19`);
+          const fileRes = await fetch(`moodle-slides/${encodeURIComponent(item.file)}?v=20`);
           if (!fileRes.ok) continue;
           const blob = await fileRes.blob();
           const isPptx = item.file.toLowerCase().endsWith(".pptx");
@@ -331,7 +331,6 @@ const App = (() => {
     }
     const saved = await res.json();
     cloudSha = saved.content?.sha || cloudSha;
-    state.sync = "Notlar telefonda da görünecek.";
     return true;
   }
 
@@ -339,9 +338,71 @@ const App = (() => {
     clearTimeout(cloudTimer);
     cloudTimer = setTimeout(() => {
       pushCloudNotes().catch((error) => {
-        state.sync = `Telefona gönderilemedi: ${error.message || error}`;
+        console.warn("cloud push", error);
       });
     }, 900);
+  }
+
+  async function flushOpenNotes() {
+    const gym = document.querySelector("#gym-note");
+    if (gym) {
+      await DB.put("dayNotes", {
+        date: calSelected,
+        text: gym.value,
+        updatedAt: Date.now(),
+      });
+    }
+    const courseArea = document.querySelector("#course-notes");
+    if (courseArea && route.courseId) {
+      const course = await DB.get("courses", route.courseId);
+      if (course) {
+        await DB.put("notes", {
+          courseId: course.id,
+          courseName: course.name,
+          text: courseArea.value,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+  }
+
+  function topBar(brandHtml) {
+    const header = el(`
+      <header class="topbar">
+        <div class="brand">${brandHtml}</div>
+        <button class="btn save-btn" id="save-sync" type="button">Kaydet</button>
+      </header>
+    `);
+    header.querySelector("#save-sync").addEventListener("click", saveAndSync);
+    return header;
+  }
+
+  async function saveAndSync() {
+    const btn = document.querySelector("#save-sync");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Kaydediliyor…";
+    }
+    try {
+      await flushOpenNotes();
+      try {
+        await pushCloudNotes();
+      } catch (error) {
+        console.warn("cloud push", error);
+      }
+      await pullCloudNotes();
+      await importMoodlePack();
+      await importLivePack();
+      state.sync = "Kaydedildi.";
+      state.error = "";
+      await render();
+    } catch (error) {
+      state.error = error.message || "Kaydedilemedi.";
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Kaydet";
+      }
+    }
   }
 
   async function gymCalendarCard() {
@@ -480,7 +541,7 @@ const App = (() => {
   async function importLivePack() {
     if (location.protocol === "file:") return;
     try {
-      const res = await fetch("data/live-classes.json?v=19");
+      const res = await fetch("data/live-classes.json?v=20");
       if (!res.ok) return;
       const pack = await res.json();
       const existing = await DB.all("liveClasses");
@@ -820,20 +881,10 @@ const App = (() => {
   async function renderHome() {
     const courses = (await DB.all("courses")).sort((a, b) => b.createdAt - a.createdAt);
     root.innerHTML = "";
-    root.append(
-      el(`
-        <header class="topbar">
-          <div class="brand">
-            <small>Haftalık slayt defteri</small>
-            <h1>Mert Ajanda</h1>
-          </div>
-        </header>
-      `)
-    );
+    root.append(topBar(`<h1>Neo Class for Mert</h1>`));
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
     root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
-    root.append(await liveClassesCard());
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
     } else {
@@ -851,6 +902,7 @@ const App = (() => {
       }
       root.append(grid);
     }
+    root.append(await liveClassesCard());
     root.append(await gymCalendarCard());
   }
 
@@ -889,14 +941,10 @@ const App = (() => {
     );
     root.innerHTML = "";
     root.append(
-      el(`
-        <header class="topbar">
-          <div class="brand">
+      topBar(`
             <div class="crumbs"><a href="#/">Dersler</a> / ${escapeHtml(course.name)}</div>
             <h1>${escapeHtml(course.name)}</h1>
             <div class="meta">${escapeHtml(course.code || "")}</div>
-          </div>
-        </header>
       `)
     );
     root.append(await courseNotesCard(course));
@@ -929,9 +977,7 @@ const App = (() => {
 
     root.innerHTML = "";
     root.append(
-      el(`
-        <header class="topbar">
-          <div class="brand">
+      topBar(`
             <div class="crumbs">
               <a href="#/">Dersler</a> /
               <a href="#/course/${course.id}">${escapeHtml(course.name)}</a> /
@@ -939,8 +985,6 @@ const App = (() => {
             </div>
             <h1>Hafta ${week.weekNumber}</h1>
             <div class="meta">${escapeHtml(week.title || "Slaytlar ve özet")}</div>
-          </div>
-        </header>
       `)
     );
     const tabs = el(`

@@ -44,10 +44,15 @@ button {
 
 .topbar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 28px;
+}
+
+.save-btn {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .brand {
@@ -516,12 +521,12 @@ textarea:-webkit-autofill {
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
   }
 
   .brand h1 {
-    font-size: 28px;
+    font-size: 22px;
   }
 
   .form-card .row,
