@@ -12,7 +12,7 @@
   <key>WorkingDirectory</key>
   <string>/Users/mert/Projects/ders-defteri</string>
   <key>StartInterval</key>
-  <integer>60</integer>
+  <integer>5</integer>
   <key>RunAtLoad</key>
   <true/>
   <key>StandardOutPath</key>
