@@ -7,6 +7,7 @@ import os
 import pathlib
 import re
 import subprocess
+import time
 from urllib.parse import parse_qs, quote, urlparse
 
 ROOT = pathlib.Path("/Users/mert/Projects/ders-defteri")
@@ -136,11 +137,8 @@ def main():
         return
     classes = data.get("classes") or []
     now = datetime.datetime.now()
-    minutes = now.hour * 60 + now.minute
     today = now.strftime("%Y-%m-%d")
-    weekday = now.weekday()  # Mon=0 ... Sun=6
-    # convert to JS-like Sunday=0: (weekday+1)%7? 
-    # Python weekday: Mon=0. Our DAY_MAP uses Sun=0.
+    weekday = now.weekday()
     js_day = (weekday + 1) % 7
     for item in classes:
         if not item.get("autoJoin", True):
@@ -148,13 +146,23 @@ def main():
         days = class_days(item)
         if days and js_day not in days:
             continue
-        start = parse_hm(item.get("start") or "00:00")
-        if minutes < start - 2 or minutes > start + 20:
+        hour, minute = str(item.get("start") or "00:00").split(":")[:2]
+        start_at = now.replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
+        offset = (now - start_at).total_seconds()
+        if offset < -55 or offset > 45:
             continue
+        if offset < 0:
+            time.sleep(-offset)
+            now = datetime.datetime.now()
+            offset = (now - start_at).total_seconds()
         key = f"{today}:{item.get('title')}:{item.get('start')}"
         if already_joined(key):
             continue
         mark_joined(key)
+        print(
+            f"{now.isoformat(timespec='seconds')} join_click_at offset_s={offset:.3f} {item.get('title')}",
+            flush=True,
+        )
         join(item)
 
 

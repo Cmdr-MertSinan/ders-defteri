@@ -1,20 +1,29 @@
 name: Cloud Teams join
 on:
   schedule:
-    # Monday / Thursday / Friday 17:58 Turkey (UTC+3)
-    - cron: "58 14 * * 1"
-    - cron: "58 14 * * 4"
-    - cron: "58 14 * * 5"
+    # Turkey 14:00 / 15:00 / 16:00 / 17:00 / 17:45. Script waits until 18:00:00.
+    - cron: "0 11 * * 1,4,5"
+    - cron: "0 12 * * 1,4,5"
+    - cron: "0 13 * * 1,4,5"
+    - cron: "0 14 * * 1,4,5"
+    - cron: "45 14 * * 1,4,5"
   workflow_dispatch:
     inputs:
+      wait_for_start:
+        description: "1 = 18:00'ı bekle, 0 = hemen katıl"
+        required: false
+        default: "0"
       max_seconds:
-        description: Join denemesinden sonra kaç saniye kalsın
+        description: Katıldıktan sonra en fazla kaç saniye izle
         required: false
         default: "180"
+concurrency:
+  group: teams-join
+  cancel-in-progress: false
 jobs:
   join:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 480
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,12 +36,14 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Join class
         env:
+          PYTHONUNBUFFERED: "1"
           TEAMS_USER: ${{ secrets.TEAMS_USER }}
           TEAMS_PASSWORD: ${{ secrets.TEAMS_PASSWORD }}
           TEAMS_JOIN_URL: ${{ secrets.TEAMS_JOIN_URL }}
           TEAMS_JOIN_HALK: ${{ secrets.TEAMS_JOIN_HALK }}
           TEAMS_JOIN_FIZYO: ${{ secrets.TEAMS_JOIN_FIZYO }}
           TEAMS_JOIN_ANATOMI: ${{ secrets.TEAMS_JOIN_ANATOMI }}
-          TEAMS_LEAVE_BELOW: "10"
+          TEAMS_CLASS_START: "18:00"
+          TEAMS_WAIT_FOR_START: ${{ github.event.inputs.wait_for_start || '1' }}
           TEAMS_MAX_SECONDS: ${{ github.event.inputs.max_seconds || '14400' }}
         run: python scripts/cloud-teams-join.py
