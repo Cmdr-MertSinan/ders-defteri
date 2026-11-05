@@ -24,6 +24,10 @@ const App = (() => {
     render();
   });
 
+  window.addEventListener("pagehide", () => {
+    if (viewerSession?.fileId) persistViewerPage();
+  });
+
   window.addEventListener("keydown", (event) => {
     if (!viewerSession?.goTo) return;
     if (event.altKey || event.metaKey || event.ctrlKey) return;
@@ -1121,7 +1125,7 @@ const App = (() => {
   }
 
   function savedSlideIndex(fileId, total) {
-    const raw = sessionStorage.getItem(slideStorageKey(fileId));
+    const raw = sessionStorage.getItem(slideStorageKey(fileId)) || localStorage.getItem(slideStorageKey(fileId));
     const index = Number(raw);
     if (!Number.isInteger(index) || index < 0 || index >= total) return 0;
     return index;
@@ -1129,8 +1133,16 @@ const App = (() => {
 
   function rememberSlideIndex(fileId, page, total) {
     const index = page - 1;
-    if (!Number.isInteger(index) || index < 0 || index >= total) return;
-    sessionStorage.setItem(slideStorageKey(fileId), String(index));
+    if (!fileId || !Number.isInteger(index) || index < 0 || index >= total) return;
+    const key = slideStorageKey(fileId);
+    const value = String(index);
+    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
+  }
+
+  function persistViewerPage() {
+    if (!viewerSession?.fileId || !viewerSession.page || !viewerSession.total) return;
+    rememberSlideIndex(viewerSession.fileId, viewerSession.page, viewerSession.total);
   }
 
   async function showFile(file) {
@@ -1348,7 +1360,11 @@ const App = (() => {
       await render();
       startLiveWatcher();
       document.addEventListener("visibilitychange", async () => {
-        if (document.hidden) return;
+        if (document.hidden) {
+          persistViewerPage();
+          return;
+        }
+        if (route.name === "week" && route.tab !== "summary") return;
         if (document.activeElement && document.activeElement.tagName === "TEXTAREA") return;
         try {
           await pullCloudNotes();
