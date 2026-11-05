@@ -1116,6 +1116,23 @@ const App = (() => {
 
   let viewerSession = null;
 
+  function slideStorageKey(fileId) {
+    return `slider-${route.weekId || "week"}-${fileId}-index`;
+  }
+
+  function savedSlideIndex(fileId, total) {
+    const raw = sessionStorage.getItem(slideStorageKey(fileId));
+    const index = Number(raw);
+    if (!Number.isInteger(index) || index < 0 || index >= total) return 0;
+    return index;
+  }
+
+  function rememberSlideIndex(fileId, page, total) {
+    const index = page - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= total) return;
+    sessionStorage.setItem(slideStorageKey(fileId), String(index));
+  }
+
   async function showFile(file) {
     const viewer = document.getElementById("viewer");
     const nav = document.getElementById("page-nav");
@@ -1153,6 +1170,7 @@ const App = (() => {
             while (pending !== null && viewerSession.fileId === file.id) {
               viewerSession.page = pending;
               pending = null;
+              rememberSlideIndex(file.id, viewerSession.page, viewerSession.total);
               await Extract.renderPdfPage(pdf, viewerSession.page, canvas);
               if (label) label.textContent = `Sayfa ${viewerSession.page} / ${viewerSession.total}`;
               if (prev) prev.disabled = viewerSession.page <= 1;
@@ -1166,7 +1184,7 @@ const App = (() => {
         viewerSession.goTo = goTo;
         prev.onclick = () => goTo(viewerSession.page - 1);
         next.onclick = () => goTo(viewerSession.page + 1);
-        await goTo(1);
+        await goTo(savedSlideIndex(file.id, viewerSession.total) + 1);
       } else if (file.name.toLowerCase().endsWith(".pptx")) {
         const pptx = await Extract.openPptx(await file.blob.arrayBuffer());
         viewerSession.pptx = pptx;
@@ -1180,6 +1198,7 @@ const App = (() => {
             while (pending !== null && viewerSession.fileId === file.id) {
               viewerSession.page = pending;
               pending = null;
+              rememberSlideIndex(file.id, viewerSession.page, viewerSession.total);
               Extract.renderPptxSlide(pptx, viewerSession.page, viewer);
               if (label) label.textContent = `Slayt ${viewerSession.page} / ${viewerSession.total}`;
               if (prev) prev.disabled = viewerSession.page <= 1;
@@ -1193,7 +1212,7 @@ const App = (() => {
         viewerSession.goTo = goTo;
         prev.onclick = () => goTo(viewerSession.page - 1);
         next.onclick = () => goTo(viewerSession.page + 1);
-        await goTo(1);
+        await goTo(savedSlideIndex(file.id, viewerSession.total) + 1);
       } else {
         if (nav) nav.hidden = true;
         viewer.innerHTML = `<p class="status" style="color:#eee;padding:24px">Bu dosya türü önizlenemiyor. İndirip açabilirsin.</p>`;
