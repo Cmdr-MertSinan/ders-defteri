@@ -779,7 +779,7 @@ const App = (() => {
     const card = el(`
       <section class="card form-card live-card">
         <div>
-          <strong>Canlı dersler</strong>
+          <strong class="panel-title">Canlı dersler</strong>
           <p class="meta">Katılınca tarayıcıda misafir açılmaz; telefonda/bilgisayarda senin Teams uygulaman açılır. Yoklama için Teams’te 26121188@eul.edu.tr hesabın açık kalsın.</p>
         </div>
         <div class="live-today" id="live-today"></div>
@@ -913,7 +913,7 @@ const App = (() => {
   async function renderHome() {
     const courses = (await DB.all("courses")).sort((a, b) => b.createdAt - a.createdAt);
     root.innerHTML = "";
-    root.append(topBar(`<h1>Neo Class for Mert</h1>`));
+    root.append(topBar(`<h1>Neo Class for Mert</h1><p class="tagline">Dersler, canlı sınıflar ve notlar</p>`));
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
     root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
