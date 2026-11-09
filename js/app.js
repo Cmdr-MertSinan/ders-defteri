@@ -916,7 +916,7 @@ const App = (() => {
     root.append(topBar(`<h1>Neo Class for Mert</h1><p class="tagline">Dersler, canlı sınıflar ve notlar</p>`));
     if (state.error) root.append(el(`<p class="error">${escapeHtml(state.error)}</p>`));
     if (state.sync) root.append(el(`<p class="meta">${escapeHtml(state.sync)}</p>`));
-    root.append(el(`<h2 class="term-heading">1. sınıf güz</h2>`));
+    root.append(el(`<h2 class="term-heading">2026/2027 Fall</h2>`));
     if (!courses.length) {
       root.append(el(`<div class="empty">Henüz ders yok. Moodle slaytları yüklenince burada görünecek.</div>`));
     } else {
