@@ -437,9 +437,25 @@ const App = (() => {
     }
   }
 
+  function workoutCategory(text) {
+    const line =
+      String(text || "")
+        .split(/\r?\n/)
+        .map((part) => part.trim())
+        .find(Boolean) || "";
+    if (/^push\s*day\s*chest\b/i.test(line)) return "chest";
+    if (/^push\s*day\s*shoulder\b/i.test(line)) return "shoulder";
+    if (/^pull\s*day\b/i.test(line)) return "pull";
+    return "";
+  }
+
   async function gymCalendarCard() {
     const notes = await DB.all("dayNotes");
     const noted = new Set(notes.filter((item) => (item.text || "").trim()).map((item) => item.date));
+    const categoryByDate = new Map(
+      notes.map((item) => [item.date, workoutCategory(item.text)])
+    );
+    const selectedCategory = categoryByDate.get(calSelected) || "";
     const todayKey = dateKey(new Date());
     const first = new Date(calView.year, calView.month, 1);
     const startPad = (first.getDay() + 6) % 7;
@@ -468,11 +484,13 @@ const App = (() => {
             .map((key) => {
               if (!key) return `<span class="cal-empty"></span>`;
               const day = Number(key.slice(-2));
+              const category = categoryByDate.get(key) || "";
               const classes = [
                 "cal-day",
                 key === todayKey ? "today" : "",
                 key === calSelected ? "selected" : "",
                 noted.has(key) ? "has-note" : "",
+                category ? `cat-${category}` : "",
               ]
                 .filter(Boolean)
                 .join(" ");
@@ -480,7 +498,7 @@ const App = (() => {
             })
             .join("")}
         </div>
-        <label>
+        <label class="gym-detail ${selectedCategory ? `cat-${selectedCategory}` : ""}">
           ${formatDayLabel(calSelected)}
           <textarea id="gym-note" rows="5" placeholder="O gün sporda ne yaptın? Set, kilo, koşu…"></textarea>
         </label>

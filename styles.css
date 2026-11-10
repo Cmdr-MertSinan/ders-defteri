@@ -339,6 +339,67 @@ a {
   background: var(--blue);
 }
 
+.cal-day.cat-chest {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+}
+
+.cal-day.cat-shoulder {
+  background: rgba(167, 139, 250, 0.18);
+  border-color: #a78bfa;
+}
+
+.cal-day.cat-pull {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: #2dd4bf;
+}
+
+.cal-day.cat-chest.has-note::after {
+  background: #38bdf8;
+}
+
+.cal-day.cat-shoulder.has-note::after {
+  background: #a78bfa;
+}
+
+.cal-day.cat-pull.has-note::after {
+  background: #2dd4bf;
+}
+
+.gym-detail.cat-chest,
+.gym-detail.cat-shoulder,
+.gym-detail.cat-pull {
+  padding-left: 10px;
+  border-left: 3px solid transparent;
+}
+
+.gym-detail.cat-chest {
+  border-left-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.gym-detail.cat-shoulder {
+  border-left-color: #a78bfa;
+  color: #a78bfa;
+}
+
+.gym-detail.cat-pull {
+  border-left-color: #2dd4bf;
+  color: #2dd4bf;
+}
+
+.gym-detail.cat-chest textarea {
+  border-color: #38bdf8;
+}
+
+.gym-detail.cat-shoulder textarea {
+  border-color: #a78bfa;
+}
+
+.gym-detail.cat-pull textarea {
+  border-color: #2dd4bf;
+}
+
 .card {
   background: rgba(17, 24, 43, 0.78);
   border: 1px solid var(--line);
