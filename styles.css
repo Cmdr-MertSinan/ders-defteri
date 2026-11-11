@@ -443,6 +443,10 @@ a {
   gap: 8px;
 }
 
+.workout-pick[hidden] {
+  display: none;
+}
+
 .card {
   background: rgba(17, 24, 43, 0.78);
   border: 1px solid var(--line);
