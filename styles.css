@@ -340,17 +340,17 @@ a {
 }
 
 .cal-day.cat-chest {
-  background: rgba(56, 189, 248, 0.18);
+  background: rgba(56, 189, 248, 0.1);
   border-color: #38bdf8;
 }
 
 .cal-day.cat-shoulder {
-  background: rgba(167, 139, 250, 0.18);
-  border-color: #a78bfa;
+  background: rgba(37, 99, 235, 0.1);
+  border-color: #2563eb;
 }
 
 .cal-day.cat-pull {
-  background: rgba(45, 212, 191, 0.18);
+  background: rgba(45, 212, 191, 0.1);
   border-color: #2dd4bf;
 }
 
@@ -359,12 +359,17 @@ a {
   border-color: #f59e0b;
 }
 
+.cal-day.cat-rest {
+  background: rgba(100, 116, 139, 0.1);
+  border-color: #64748b;
+}
+
 .cal-day.cat-chest.has-note::after {
   background: #38bdf8;
 }
 
 .cal-day.cat-shoulder.has-note::after {
-  background: #a78bfa;
+  background: #2563eb;
 }
 
 .cal-day.cat-pull.has-note::after {
@@ -375,10 +380,15 @@ a {
   background: #f59e0b;
 }
 
+.cal-day.cat-rest.has-note::after {
+  background: #64748b;
+}
+
 .gym-detail.cat-chest,
 .gym-detail.cat-shoulder,
 .gym-detail.cat-pull,
-.gym-detail.cat-leg {
+.gym-detail.cat-leg,
+.gym-detail.cat-rest {
   padding-left: 10px;
   border-left: 3px solid transparent;
 }
@@ -389,8 +399,8 @@ a {
 }
 
 .gym-detail.cat-shoulder {
-  border-left-color: #a78bfa;
-  color: #a78bfa;
+  border-left-color: #2563eb;
+  color: #2563eb;
 }
 
 .gym-detail.cat-pull {
@@ -403,12 +413,17 @@ a {
   color: #f59e0b;
 }
 
+.gym-detail.cat-rest {
+  border-left-color: #64748b;
+  color: #64748b;
+}
+
 .gym-detail.cat-chest textarea {
   border-color: #38bdf8;
 }
 
 .gym-detail.cat-shoulder textarea {
-  border-color: #a78bfa;
+  border-color: #2563eb;
 }
 
 .gym-detail.cat-pull textarea {
@@ -417,6 +432,10 @@ a {
 
 .gym-detail.cat-leg textarea {
   border-color: #f59e0b;
+}
+
+.gym-detail.cat-rest textarea {
+  border-color: #64748b;
 }
 
 .workout-pick {

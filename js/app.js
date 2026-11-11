@@ -447,6 +447,7 @@ const App = (() => {
     if (/^push\s*day\s*shoulder\b/i.test(line)) return "shoulder";
     if (/^pull\s*day\b/i.test(line)) return "pull";
     if (/^leg\s*day\b/i.test(line)) return "leg";
+    if (/^rest\s*day\b/i.test(line)) return "rest";
     return "";
   }
 
@@ -455,7 +456,27 @@ const App = (() => {
     { id: "shoulder", title: "Push Day Shoulder" },
     { id: "pull", title: "Pull Day" },
     { id: "leg", title: "Leg Day" },
+    { id: "rest", title: "Rest Day" },
   ];
+
+  function withWorkoutTitle(text, title) {
+    const raw = String(text || "");
+    if (!workoutCategory(raw)) {
+      const rest = raw.replace(/^\s+/, "");
+      return rest ? `${title}\n${rest}` : title;
+    }
+    let replaced = false;
+    return raw
+      .split(/\r?\n/)
+      .map((line) => {
+        if (!replaced && workoutCategory(line)) {
+          replaced = true;
+          return title;
+        }
+        return line;
+      })
+      .join("\n");
+  }
 
   async function gymCalendarCard() {
     const notes = await DB.all("dayNotes");
@@ -508,17 +529,18 @@ const App = (() => {
         </div>
         ${
           selectedCategory
-            ? ""
-            : `<div class="workout-pick" id="workout-pick">
-                <p class="meta">Bu gün hangi antrenman?</p>
-                <div class="row">
-                  ${WORKOUT_TYPES.map(
-                    (type) =>
-                      `<button class="btn secondary" type="button" data-workout="${type.id}">${type.title}</button>`
-                  ).join("")}
-                </div>
-              </div>`
+            ? `<button class="btn ghost" id="workout-change" type="button">Antrenman Türünü Değiştir</button>`
+            : ""
         }
+        <div class="workout-pick" id="workout-pick" ${selectedCategory ? "hidden" : ""}>
+          <p class="meta">Bu gün hangi antrenman?</p>
+          <div class="row">
+            ${WORKOUT_TYPES.map(
+              (type) =>
+                `<button class="btn secondary" type="button" data-workout="${type.id}">${type.title}</button>`
+            ).join("")}
+          </div>
+        </div>
         <label class="gym-detail ${selectedCategory ? `cat-${selectedCategory}` : ""}">
           ${formatDayLabel(calSelected)}
           <textarea id="gym-note" rows="5" placeholder="O gün sporda ne yaptın? Set, kilo, koşu…"></textarea>
@@ -571,12 +593,15 @@ const App = (() => {
         replaceCalendar();
       });
     });
+    card.querySelector("#workout-change")?.addEventListener("click", () => {
+      const picker = card.querySelector("#workout-pick");
+      if (picker) picker.hidden = false;
+    });
     card.querySelectorAll("[data-workout]").forEach((button) => {
       button.addEventListener("click", async () => {
         const type = WORKOUT_TYPES.find((item) => item.id === button.dataset.workout);
-        if (!type || workoutCategory(area.value)) return;
-        const rest = area.value.replace(/^\s+/, "");
-        area.value = rest ? `${type.title}\n${rest}` : type.title;
+        if (!type) return;
+        area.value = withWorkoutTitle(area.value, type.title);
         await saveNote();
         replaceCalendar();
       });
