@@ -1,5 +1,5 @@
 {
-  "updatedAt": 1794356049366,
+  "updatedAt": 1794356051275,
   "dayNotes": {
     "2026-10-23": {
       "text": "",
@@ -71,7 +71,11 @@
     },
     "2026-11-22": {
       "text": "Rest Day",
-      "updatedAt": 1794356047918
+      "updatedAt": 1794356049418
+    },
+    "2026-11-29": {
+      "text": "Rest Day",
+      "updatedAt": 1794356050373
     }
   },
   "courseNotes": {
