@@ -354,6 +354,11 @@ a {
   border-color: #2dd4bf;
 }
 
+.cal-day.cat-leg {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #f59e0b;
+}
+
 .cal-day.cat-chest.has-note::after {
   background: #38bdf8;
 }
@@ -366,9 +371,14 @@ a {
   background: #2dd4bf;
 }
 
+.cal-day.cat-leg.has-note::after {
+  background: #f59e0b;
+}
+
 .gym-detail.cat-chest,
 .gym-detail.cat-shoulder,
-.gym-detail.cat-pull {
+.gym-detail.cat-pull,
+.gym-detail.cat-leg {
   padding-left: 10px;
   border-left: 3px solid transparent;
 }
@@ -388,6 +398,11 @@ a {
   color: #2dd4bf;
 }
 
+.gym-detail.cat-leg {
+  border-left-color: #f59e0b;
+  color: #f59e0b;
+}
+
 .gym-detail.cat-chest textarea {
   border-color: #38bdf8;
 }
@@ -398,6 +413,15 @@ a {
 
 .gym-detail.cat-pull textarea {
   border-color: #2dd4bf;
+}
+
+.gym-detail.cat-leg textarea {
+  border-color: #f59e0b;
+}
+
+.workout-pick {
+  display: grid;
+  gap: 8px;
 }
 
 .card {
